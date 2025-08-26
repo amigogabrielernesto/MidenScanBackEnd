@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "proto:gen": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./proto --ts_proto_opt=nestJs=true,outputServices=grpc-js,useOptionals=true --proto_path=./proto ./proto/**/*.proto",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -24,12 +25,20 @@
     "@nestjs/microservices": "^11.1.6",
     "@nestjs/platform-express": "^11.1.5",
     "@nestjs/swagger": "^11.2.0",
+    "axios": "^1.11.0",
+    "bech32": "^2.0.0",
     "class-validator": "^0.14.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "google-protobuf": "^4.0.0",
     "ioredis": "^5.7.0",
     "swagger-ui-express": "^5.0.1",
     "ts-node-dev": "^2.0.0",
+    "ts-proto": "^2.7.7",
     "typescript": "^5.9.2"
+  },
+  "devDependencies": {
+    "@types/google-protobuf": "^3.15.12",
+    "grpc-tools": "^1.13.0"
   }
 }

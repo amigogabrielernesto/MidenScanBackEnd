@@ -3,7 +3,9 @@ import { AppModule } from "./app.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ["log", "warn", "error", "debug"], // 🔹 Habilita debug
+  });
 
   const config = new DocumentBuilder()
     .setTitle("Miden Explorer API")

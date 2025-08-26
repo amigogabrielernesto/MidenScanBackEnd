@@ -1,3 +1,5 @@
+import { bech32, bech32m } from "bech32";
+
 export function convertRespuestaToHex(respuesta: {
   d0: string;
   d1: string;
@@ -44,3 +46,22 @@ export function convertAllCommitments(blockHeader: any) {
 
   return result;
 }
+
+export function decodeMidenAccountId(bech: string): Uint8Array {
+  // Decodificamos con Bech32
+  const { prefix, words } = require("bech32").bech32m.decode(bech);
+
+  // Validamos que el prefijo sea `mtst` (testnet) o `mm` (mainnet)
+  if (prefix !== "mtst" && prefix !== "mm") {
+    throw new Error(`Prefijo no válido: ${prefix}. Se espera "mtst" o "mm".`);
+  }
+
+  // Convertimos grupos de palabras 5-bits a bytes 8-bits
+  const data = Uint8Array.from(require("bech32").bech32m.fromWords(words));
+  const padded = new Uint8Array(32);
+  // Expandir a 32 bytes rellenando con ceros al inicio
+  padded.set(data, 32 - data.length); // alinea a la derecha
+  return padded;
+}
+
+// Ejemplo de uso

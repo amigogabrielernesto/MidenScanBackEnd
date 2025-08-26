@@ -1,8 +1,10 @@
-// src/miden/miden.module.ts
+import { join } from "path";
 import { Module } from "@nestjs/common";
 import { ClientsModule, Transport } from "@nestjs/microservices";
 import { grpcOptions } from "./miden.grpc.options";
 import { MidenService } from "./miden.service";
+import { MidenController } from "./miden.controller";
+import { MidenRustService } from "./miden-rust.service";
 
 @Module({
   imports: [
@@ -14,7 +16,8 @@ import { MidenService } from "./miden.service";
       },
     ]),
   ],
-  providers: [MidenService],
+  providers: [MidenService, MidenRustService],
   exports: [MidenService],
+  controllers: [MidenController],
 })
 export class MidenModule {}

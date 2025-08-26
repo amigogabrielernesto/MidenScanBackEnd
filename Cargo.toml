@@ -1,0 +1,17 @@
+[package]
+name = "miden-deserializer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+warp = "0.3"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+base64 = "0.21"
+anyhow = "1.0"
+
+# Comentadas temporalmente hasta verificar que existen
+# prost = "0.12"
+# tonic = "0.10"
+miden-objects = { git = "https://github.com/0xMiden/miden-base.git", package = "miden-objects" }
