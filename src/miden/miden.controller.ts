@@ -1,92 +1,72 @@
-import { Controller, Get, Param, ParseIntPipe } from "@nestjs/common";
-import { MidenService } from "./miden.service";
+// miden.service.ts
+import {
+  Injectable,
+  HttpException,
+  HttpStatus,
+  Controller,
+  Get,
+  Param,
+} from "@nestjs/common";
+import { ApiParam, ApiTags } from "@nestjs/swagger";
+import axios from "axios";
 
+@Injectable()
 @Controller("miden")
+@ApiTags("Company-categories")
 export class MidenController {
-  constructor(private readonly midenService: MidenService) {}
+  private readonly RUST_SERVICE_URL = "http://localhost:3030/decode";
 
-  @Get("status")
-  getStatus() {
-    return this.midenService.getStatus();
+  @ApiParam({ name: "id", description: "nro de bloque" })
+  @Get(":id")
+  async getFormattedBlock(@Param("id") blockNumber: number): Promise<any> {
+    try {
+      // 1. Convertir el número de bloque al formato que espera Rust
+      const requestData = {
+        data: this.encodeBlockNumber(blockNumber),
+      };
+
+      // 2. Hacer la petición POST al servicio Rust
+      const response = await axios.post(this.RUST_SERVICE_URL, requestData, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 5000, // timeout de 5 segundos
+      });
+
+      // 3. Retornar la respuesta formateada
+      return {
+        success: true,
+        blockNumber: blockNumber,
+        data: response.data,
+      };
+    } catch (error) {
+      // 4. Manejar errores adecuadamente
+      if (error.response?.status === 404) {
+        throw new HttpException(
+          { success: false, message: "Block not found" },
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      throw new HttpException(
+        {
+          success: false,
+          message: "Error fetching block data",
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 
-  @Get("block/:number")
-  async getBlock(@Param("number", ParseIntPipe) blockNumber: number) {
-    return this.midenService.getFormattedBlock(blockNumber);
+  private encodeBlockNumber(blockNumber: number): string {
+    // Depende de qué formato espera Rust:
+
+    // Opción 1: Número como string en base64
+    return Buffer.from(blockNumber.toString()).toString("base64");
+
+    // Opción 2: JSON con el número de bloque
+    // return Buffer.from(JSON.stringify({ block: blockNumber })).toString('base64');
+
+    // Opción 3: Formato específico que espera Miden
+    // return Buffer.from(`block:${blockNumber}`).toString('base64');
   }
 }
-
-// @Get("get-block-header-by-number/:blockNum") async getBlockHeaderByNumber(
-//   @Param("blockNum", ParseIntPipe) blockNum: number
-// ) {
-//   const respuesta = await lastValueFrom(
-//     this.midenService.getBlockHeaderByNumber(blockNum)
-//   );
-//   const date = new Date(respuesta.block_header.timestamp * 1000);
-//   //console.log(blockNum);
-//   //console.log(respuesta);
-//   //console.log(respuesta.block_header.proof_commitment);
-
-//   const salida = {
-//     block_header: {
-//       version: respuesta.block_header.version,
-//       block_num: respuesta.block_header.block_num,
-//       timestamp: date.toLocaleString(),
-//       prev_block_commitment: convertRespuestaToHex(
-//         respuesta.block_header.prev_block_commitment
-//       ),
-//       chain_commitment: convertRespuestaToHex(
-//         respuesta.block_header.chain_commitment
-//       ),
-//       account_root: convertRespuestaToHex(
-//         respuesta.block_header.account_root
-//       ),
-//       nullifier_root: convertRespuestaToHex(
-//         respuesta.block_header.nullifier_root
-//       ),
-//       note_root: convertRespuestaToHex(respuesta.block_header.note_root),
-//       tx_commitment: convertRespuestaToHex(
-//         respuesta.block_header.tx_commitment
-//       ),
-//       proof_commitment: convertRespuestaToHex(
-//         respuesta.block_header.proof_commitment
-//       ),
-//       tx_kernel_commitment: convertRespuestaToHex(
-//         respuesta.block_header.tx_kernel_commitment
-//       ),
-//     },
-//   };
-//   return salida;
-// }
-
-// @Get(":blockNumber")
-// async getBlock(@Param("blockNumber") blockNumber: number) {
-//   try {
-//     const block = await this.midenService.getFormattedBlock(blockNumber);
-//     return {
-//       success: true,
-//       data: block,
-//     };
-//   } catch (error) {
-//     return {
-//       success: false,
-//       error: error.message,
-//     };
-//   }
-// }
-
-// @Get(":blockNumber/raw")
-// async getRawBlock(@Param("blockNumber") blockNumber: number) {
-//   try {
-//     const block = await this.midenService.getBlockByNumber(blockNumber);
-//     return {
-//       success: true,
-//       data: block,
-//     };
-//   } catch (error) {
-//     return {
-//       success: false,
-//       error: error.message,
-//     };
-//   }
-// }

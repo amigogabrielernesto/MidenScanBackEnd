@@ -43,13 +43,13 @@ export class MidenService implements OnModuleInit {
 
   constructor(
     @Inject("MidenApiClient")
-    private client: ClientGrpc,
+    private clientGrpc: ClientGrpc,
     private readonly rustService: MidenRustService
   ) {}
 
   onModuleInit() {
-    this.rpcClient = this.client.getService<BlockchainClient>("Api");
-    this.rpcStatusClient = this.client.getService<RpcStatusClient>("Api");
+    this.rpcClient = this.clientGrpc.getService<BlockchainClient>("Api");
+    this.rpcStatusClient = this.clientGrpc.getService<RpcStatusClient>("Api");
   }
 
   async getStatus() {
