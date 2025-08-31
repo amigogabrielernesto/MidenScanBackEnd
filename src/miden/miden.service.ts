@@ -1,128 +1,123 @@
-import { Injectable, Inject, OnModuleInit } from "@nestjs/common";
-import { ClientGrpc } from "@nestjs/microservices";
-import { lastValueFrom, Observable } from "rxjs";
-import { MidenRustService } from "./miden-rust.service";
-import { Empty } from "google-protobuf/google/protobuf/empty_pb";
-import { Logger } from "@nestjs/common";
-
-interface RawBlockResponse {
-  block: {
-    type: string;
-    data: number[];
-  };
-  _block: string;
-}
-// Tipado gRPC
-interface MaybeBlockResponse {
-  block_bytes: Uint8Array;
-}
-
-interface BlockchainClient {
-  GetBlockByNumber(data: { block_num: number }): Observable<RawBlockResponse>;
-}
-
-interface RpcStatusClient {
-  Status(request: Empty): Observable<any>;
-}
-
-// interface BlockchainClient {
-//   GetBlockByNumber(data: { block_num: number }): Observable<MaybeBlockResponse>;
-// }
-
-// Función para convertir buffers/arrays a hex
-const toHex = (buf: Uint8Array) =>
-  Array.from(buf)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+// src/miden-test/miden-test.service.ts
+import { Injectable } from "@nestjs/common";
+import { HttpService } from "@nestjs/axios";
+import { firstValueFrom } from "rxjs";
+import {
+  TestResult,
+  TestCase,
+  TestDecodeResponse,
+  TestBlockResponse,
+} from "./miden.interfaces";
 
 @Injectable()
-export class MidenService implements OnModuleInit {
-  private rpcClient: BlockchainClient;
-  private rpcStatusClient: RpcStatusClient;
-  private readonly logger = new Logger(MidenService.name);
+export class MidenService {
+  private readonly RUST_SERVICE_URL = "http://127.0.0.1:3030/decode";
 
-  constructor(
-    @Inject("MidenApiClient")
-    private clientGrpc: ClientGrpc,
-    private readonly rustService: MidenRustService
-  ) {}
+  constructor(private readonly httpService: HttpService) {}
 
-  onModuleInit() {
-    this.rpcClient = this.clientGrpc.getService<BlockchainClient>("Api");
-    this.rpcStatusClient = this.clientGrpc.getService<RpcStatusClient>("Api");
-  }
+  async testDecode(testData: any): Promise<TestDecodeResponse> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(this.RUST_SERVICE_URL, testData, {
+          headers: { "Content-Type": "application/json" },
+          timeout: 5000,
+        })
+      );
 
-  async getStatus() {
-    const response$ = this.rpcStatusClient.Status(new Empty());
-    const response = await lastValueFrom(response$);
-    return response;
-  }
-
-  async getFormattedBlock(blockNumber: number) {
-    // 1️⃣ Consultamos status
-
-    const statusResponse = await this.getStatus();
-    const chainTip = statusResponse?.store?.chain_tip; // <-- cambiar data.store por solo store
-    if (!chainTip) {
-      return { success: false, message: "Cannot determine chain tip" };
-    }
-
-    // 2️⃣ Chequeo de límites
-    if (blockNumber > chainTip) {
+      return {
+        success: true,
+        rustServiceResponse: response.data,
+        sentData: testData,
+      };
+    } catch (error) {
       return {
         success: false,
-        message: `Block number ${blockNumber} exceeds chain tip ${chainTip}`,
+        error: error.message,
+        sentData: testData,
       };
     }
+  }
 
-    const blockObservable = this.rpcClient.GetBlockByNumber({
-      block_num: blockNumber,
-    });
-    // 3️⃣ Llamada gRPC para obtener el bloque
+  async testExamples(): Promise<TestResult[]> {
+    const testCases: TestCase[] = [
+      {
+        name: "Hello World en base64",
+        data: "SGVsbG8gV29ybGQ=", // "Hello World"
+      },
+      {
+        name: "Número 600000 en base64",
+        data: "NjAwMDAw", // "600000"
+      },
+      {
+        name: "JSON simple en base64",
+        data: "eyJibG9ja051bWJlciI6NjAwMDAwfQ==", // {"blockNumber":600000}
+      },
+      {
+        name: "Datos binarios ejemplo",
+        data: "AAECAwQFBgcICQ==", // Bytes: 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09
+      },
+    ];
 
-    const blockResponse = await lastValueFrom(blockObservable);
+    const results: TestResult[] = [];
 
-    const blockBytes = blockResponse.block
-      ? new Uint8Array(blockResponse.block.data)
-      : new Uint8Array();
+    for (const testCase of testCases) {
+      try {
+        const response = await firstValueFrom(
+          this.httpService.post(
+            this.RUST_SERVICE_URL,
+            { data: testCase.data },
+            {
+              headers: { "Content-Type": "application/json" },
+              timeout: 3000,
+            }
+          )
+        );
 
-    this.logger.debug(`Block bytes length: ${blockResponse}`);
-
-    if (!blockBytes.length) {
-      return { success: false, message: "Block not found or empty" };
+        results.push({
+          test: testCase.name,
+          success: true,
+          response: response.data,
+          sentData: testCase.data,
+        });
+      } catch (error) {
+        results.push({
+          test: testCase.name,
+          success: false,
+          error: error.message,
+          sentData: testCase.data,
+        });
+      }
     }
 
-    if (!blockBytes.length) {
-      return { success: false, message: "Block not found or empty" };
-    }
+    return results;
+  }
 
-    // Ahora enviás blockBytes a Rust
-    const rustResponse = await this.rustService.deserializeBlock(blockBytes);
-    // 4️⃣ Deserialización Rust
-
-    if (!rustResponse.success) {
-      return { success: false, message: rustResponse.message };
-    }
-
-    // 5️⃣ Preparar respuesta en hex
-    const headerHex = {
-      prev_block_commitment: toHex(rustResponse.header.prev_block_commitment),
-      chain_commitment: toHex(rustResponse.header.chain_commitment),
-      account_root: toHex(rustResponse.header.account_root),
-      nullifier_root: toHex(rustResponse.header.nullifier_root),
-      note_root: toHex(rustResponse.header.note_root),
-      tx_commitment: toHex(rustResponse.header.tx_commitment),
-      proof_commitment: toHex(rustResponse.header.proof_commitment),
-      tx_kernel_commitment: toHex(rustResponse.header.tx_kernel_commitment),
-      timestamp: rustResponse.header.timestamp,
-      block_num: rustResponse.header.block_num,
-      version: rustResponse.header.version,
+  async testBlock(blockNumber: number): Promise<TestBlockResponse> {
+    const testData = {
+      data: Buffer.from(blockNumber.toString()).toString("base64"),
     };
 
-    return {
-      success: true,
-      header: headerHex,
-      message: "Block deserialized successfully",
-    };
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(this.RUST_SERVICE_URL, testData, {
+          headers: { "Content-Type": "application/json" },
+          timeout: 5000,
+        })
+      );
+
+      return {
+        success: true,
+        blockNumber: blockNumber,
+        base64Data: testData.data,
+        rustServiceResponse: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        blockNumber: blockNumber,
+        base64Data: testData.data,
+        error: error.message,
+      };
+    }
   }
 }

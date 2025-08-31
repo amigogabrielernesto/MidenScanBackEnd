@@ -1,72 +1,29 @@
-// miden.service.ts
-import {
-  Injectable,
-  HttpException,
-  HttpStatus,
-  Controller,
-  Get,
-  Param,
-} from "@nestjs/common";
-import { ApiParam, ApiTags } from "@nestjs/swagger";
-import axios from "axios";
+// src/miden-test/miden-test.controller.ts
+import { Controller, Get, Post, Param, Body } from "@nestjs/common";
+import { MidenService } from "./miden.service";
 
-@Injectable()
 @Controller("miden")
-@ApiTags("Company-categories")
 export class MidenController {
-  private readonly RUST_SERVICE_URL = "http://localhost:3030/decode";
+  constructor(private readonly midenTestService: MidenService) {}
 
-  @ApiParam({ name: "id", description: "nro de bloque" })
-  @Get(":id")
-  async getFormattedBlock(@Param("id") blockNumber: number): Promise<any> {
-    try {
-      // 1. Convertir el número de bloque al formato que espera Rust
-      const requestData = {
-        data: this.encodeBlockNumber(blockNumber),
-      };
-
-      // 2. Hacer la petición POST al servicio Rust
-      const response = await axios.post(this.RUST_SERVICE_URL, requestData, {
-        headers: { "Content-Type": "application/json" },
-        timeout: 5000, // timeout de 5 segundos
-      });
-
-      // 3. Retornar la respuesta formateada
-      return {
-        success: true,
-        blockNumber: blockNumber,
-        data: response.data,
-      };
-    } catch (error) {
-      // 4. Manejar errores adecuadamente
-      if (error.response?.status === 404) {
-        throw new HttpException(
-          { success: false, message: "Block not found" },
-          HttpStatus.NOT_FOUND
-        );
-      }
-
-      throw new HttpException(
-        {
-          success: false,
-          message: "Error fetching block data",
-          error: error.message,
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+  @Post("test-decode")
+  async testDecode(@Body() testData: any) {
+    return this.midenTestService.testDecode(testData);
   }
 
-  private encodeBlockNumber(blockNumber: number): string {
-    // Depende de qué formato espera Rust:
+  @Get("test-examples")
+  async testExamples() {
+    const testResults = await this.midenTestService.testExamples();
 
-    // Opción 1: Número como string en base64
-    return Buffer.from(blockNumber.toString()).toString("base64");
+    return {
+      timestamp: new Date().toISOString(),
+      rustService: "http://127.0.0.1:3030/decode",
+      testResults: testResults,
+    };
+  }
 
-    // Opción 2: JSON con el número de bloque
-    // return Buffer.from(JSON.stringify({ block: blockNumber })).toString('base64');
-
-    // Opción 3: Formato específico que espera Miden
-    // return Buffer.from(`block:${blockNumber}`).toString('base64');
+  @Get("test-block/:number")
+  async testBlock(@Param("number") blockNumber: number) {
+    return this.midenTestService.testBlock(blockNumber);
   }
 }

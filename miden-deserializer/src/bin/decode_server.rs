@@ -1,29 +1,30 @@
 use warp::Filter;
 use base64::prelude::*;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;  // Cambiar anyhow por thiserror para Warp
-
-// Buscar la importación correcta de Block - EJEMPLOS:
-// use miden_objects::Block;
-// use miden_objects::core::Block;
-// use miden_objects::blocks::Block;
-// use miden_objects::state::Block;
+use thiserror::Error;
+#[allow(unused_imports)]  
+use miden_objects::block::BlockHeader;
+#[allow(unused_imports)]  
+use std::convert::TryFrom;
 
 #[derive(Debug, Deserialize)]
 struct DecodeRequest {
     data: String,
 }
 
-#[derive(Debug, Serialize)]
-struct DecodeResponse {
-    result: String,
-}
-
-// Definir errores personalizados que implementen Reject
 #[derive(Debug, Error)]
 enum ApiError {
     #[error("Decoding error: {0}")]
     Decode(String),
+}
+
+#[derive(Debug, Serialize)]
+struct DecodeResponse {
+    result: String,
+    block_number: Option<u32>,  // Optional mientras debuggeamos
+    block_hash: Option<String>, // Optional mientras debuggeamos
+    data_length: usize,         // Para debug
+    first_bytes: String,        // Para debug
 }
 
 impl warp::reject::Reject for ApiError {}
@@ -33,13 +34,20 @@ async fn decode_handler(req: DecodeRequest) -> Result<DecodeResponse, ApiError> 
     let raw = BASE64_STANDARD.decode(&b64)
         .map_err(|e| ApiError::Decode(format!("Base64 decoding failed: {}", e)))?;
     
-    // TODO: Usar Block cuando encuentres la importación correcta
-    // let block = Block::decode(&raw).map_err(|e| ApiError::Decode(e.to_string()))?;
+    // DEBUG: Ver qué datos recibimos
+    println!("Received base64: {}", b64);
+    println!("Decoded bytes length: {} bytes", raw.len());
+    println!("First 10 bytes: {:?}", &raw[..std::cmp::min(10, raw.len())]);
     
-    println!("Decoded {} bytes successfully", raw.len());
+    // TODO: Aquí necesitamos descubrir el formato correcto
+    // Mientras tanto, retornamos info de debug
     
     Ok(DecodeResponse {
-        result: format!("Decoded {} bytes", raw.len()),
+        result: "Received data, need to implement parsing".to_string(),
+        block_number: None,
+        block_hash: None,
+        data_length: raw.len(),
+        first_bytes: format!("{:?}", &raw[..std::cmp::min(10, raw.len())]),
     })
 }
 
