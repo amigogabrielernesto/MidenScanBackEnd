@@ -6,6 +6,7 @@ import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import { join } from "path";
 import { firstValueFrom } from "rxjs";
+import { BigInteger } from "big-integer";
 import {
   TestResult,
   TestCase,
@@ -13,8 +14,10 @@ import {
   TestBlockResponse,
   GrpcMethodResult,
   BlockTestResult,
+  BlockHeaderResponse,
 } from "./miden.interfaces";
 import { grpcOptions } from "./miden.grpc.options";
+import { fieldElementToHex, timestampToDate } from "./miden.functions";
 
 @Injectable()
 export class MidenService implements OnModuleInit {
@@ -231,28 +234,49 @@ export class MidenService implements OnModuleInit {
   }
 
   // Método alternativo para obtener solo el header del bloque
-  async obtenerHeaderBloque(blockNumber: number): Promise<any> {
-    if (!this.grpcClient) {
-      throw new Error("gRPC client not initialized");
-    }
-
-    return new Promise((resolve, reject) => {
-      // Intentar con GetBlockHeaderByNumber
-      if (typeof this.grpcClient.GetBlockHeaderByNumber === "function") {
-        this.grpcClient.GetBlockHeaderByNumber(
-          { block_number: blockNumber },
-          (error: any, response: any) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(response);
-            }
-          }
-        );
-      } else {
-        reject(new Error("Método GetBlockHeaderByNumber no disponible"));
+  async getBlockHeaderByNumber(blockNumber: number): Promise<any> {
+    try {
+      if (!this.grpcClient) {
+        throw new Error("gRPC client not initialized");
       }
-    });
+
+      const response = await new Promise<BlockHeaderResponse>(
+        (resolve, reject) => {
+          this.grpcClient.getBlockHeaderByNumber(
+            { block_number: blockNumber },
+            (error: any, response: any) => {
+              if (error) reject(error);
+              else resolve(response);
+            }
+          );
+        }
+      );
+
+      const header = response.block_header;
+
+      // Convertir todos los field elements a hex
+      return {
+        blockNumber: header.block_num,
+        version: header.version,
+        timestamp: header.timestamp,
+        formattedTimestamp: timestampToDate(header.timestamp),
+
+        // Commitments en hexadecimal
+        prevBlockCommitment: fieldElementToHex(header.prev_block_commitment),
+        chainCommitment: fieldElementToHex(header.chain_commitment),
+        accountRoot: fieldElementToHex(header.account_root),
+        nullifierRoot: fieldElementToHex(header.nullifier_root),
+        noteRoot: fieldElementToHex(header.note_root),
+        txCommitment: fieldElementToHex(header.tx_commitment),
+        proofCommitment: fieldElementToHex(header.proof_commitment),
+        txKernelCommitment: fieldElementToHex(header.tx_kernel_commitment),
+
+        // Datos originales para referencia
+        raw: response,
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to get block header: ${error.message}`);
+    }
   }
 
   // Método alternativo si el servicio se llama diferente

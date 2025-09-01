@@ -32,9 +32,34 @@ export class MidenController {
     return this.midenTestService.probarBloqueReal(numeroBloque);
   }
 
-  @Get("bloque-header/:numero")
-  async obtenerHeaderBloque(@Param("numero") numeroBloque: number) {
-    return this.midenTestService.obtenerHeaderBloque(numeroBloque);
+  @Get("block-header/:numero")
+  async obtenerHeaderBloque(@Param("numero") numeroBloque: string) {
+    try {
+      const blockNum = parseInt(numeroBloque, 10);
+
+      if (isNaN(blockNum) || blockNum < 0) {
+        return {
+          success: false,
+          error: "Invalid block number",
+        };
+      }
+
+      const blockHeader = await this.midenTestService.getBlockHeaderByNumber(
+        blockNum
+      );
+
+      return {
+        success: true,
+        data: blockHeader,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      };
+    }
   }
 
   @Get("bloques-reales/:numeros")

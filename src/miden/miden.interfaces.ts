@@ -7,6 +7,28 @@ export interface GrpcMethodResult {
   error?: string;
 }
 
+export interface FieldElement {
+  d0: string | number;
+  d1: string | number;
+  d2: string | number;
+  d3: string | number;
+}
+
+export interface BlockHeaderResponse {
+  block_header: {
+    version: number;
+    prev_block_commitment: FieldElement;
+    block_num: number;
+    chain_commitment: FieldElement;
+    account_root: FieldElement;
+    nullifier_root: FieldElement;
+    note_root: FieldElement;
+    tx_commitment: FieldElement;
+    proof_commitment: FieldElement;
+    tx_kernel_commitment: FieldElement;
+    timestamp: number;
+  };
+}
 export interface BlockTestResult {
   success: boolean;
   numero_bloque: number;
