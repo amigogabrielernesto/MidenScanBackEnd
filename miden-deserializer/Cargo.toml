@@ -1,0 +1,37 @@
+[package]
+name = "miden-deserializer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Dependencias del servidor web
+warp = "0.3"           # Para el servidor web
+tokio = { version = "1.0", features = ["full", "macros", "rt-multi-thread"] }
+hex = "0.4"  # Para hex encoding
+
+# Dependencias de encoding/decoding
+base64 = "0.21"         # Para decodificación base64
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Dependencias de Miden
+miden-objects = { version = "0.1", features = ["std"] }  # Para Block
+# Si miden-objects es local, usa path:
+# miden-objects = { path = "../miden-objects" }
+
+# Dependencias de utilidad
+anyhow = "1.0"          # Para manejo de errores
+thiserror = "1.0"       # Para errores personalizados
+log = "0.4"             # Para logging
+env_logger = "0.10"     # Para logger de entorno
+
+# Dependencias opcionales (si las necesitas más tarde)
+# tonic = "0.9"
+# prost = "0.11"
+
+[features]
+internal = []  # Para el cfg(feature = "internal")
+
+[[bin]]
+name = "decode_server"
+path = "src/bin/decode_server.rs"

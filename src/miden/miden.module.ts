@@ -1,23 +1,13 @@
-import { join } from "path";
+// src/miden-test/miden-test.module.ts
 import { Module } from "@nestjs/common";
-import { ClientsModule, Transport } from "@nestjs/microservices";
-import { grpcOptions } from "./miden.grpc.options";
+import { HttpModule } from "@nestjs/axios";
 import { MidenService } from "./miden.service";
 import { MidenController } from "./miden.controller";
-import { MidenRustService } from "./miden-rust.service";
 
 @Module({
-  imports: [
-    ClientsModule.register([
-      {
-        name: "MidenApiClient",
-        transport: Transport.GRPC,
-        options: grpcOptions, // Aquí sólo las opciones, sin transport ni name
-      },
-    ]),
-  ],
-  providers: [MidenService, MidenRustService],
-  exports: [MidenService],
+  imports: [HttpModule],
   controllers: [MidenController],
+  providers: [MidenService],
+  exports: [MidenService],
 })
-export class MidenModule {}
+export class MidenTestModule {}
