@@ -240,13 +240,35 @@ export class MidenService implements OnModuleInit {
         throw new Error("gRPC client not initialized");
       }
 
+      // ✅ Crear un NUEVO objeto para cada request
+      const request = {
+        block_num: blockNumber,
+        include_mmr_proof: false, // opcional, según necesites
+      };
+
+      console.log("📤 Sending gRPC request for block:", blockNumber);
+      console.log("Request object:", request);
       const response = await new Promise<BlockHeaderResponse>(
         (resolve, reject) => {
           this.grpcClient.getBlockHeaderByNumber(
-            { block_number: blockNumber },
+            request,
             (error: any, response: any) => {
-              if (error) reject(error);
-              else resolve(response);
+              if (error) {
+                console.error(
+                  "❌ gRPC error for block",
+                  blockNumber,
+                  ":",
+                  error
+                );
+                reject(error);
+              } else {
+                console.log(
+                  "gRPC response block number:",
+                  response.block_header?.block_num
+                );
+                console.log("Response keys:", Object.keys(response));
+                resolve(response);
+              }
             }
           );
         }
