@@ -13,6 +13,7 @@ import {
   BlockTestResult,
 } from "./miden.interfaces";
 import { grpcOptions } from "./miden.grpc.options";
+
 @Injectable()
 export class MidenService implements OnModuleInit {
   public readonly RUST_SERVICE_URL = "http://127.0.0.1:3030/decode";
@@ -32,8 +33,12 @@ export class MidenService implements OnModuleInit {
         grpcOptions.loader
       );
 
+      console.log(
+        "Package structure:",
+        JSON.stringify(packageDefinition, null, 2)
+      );
       const rpcProto = grpc.loadPackageDefinition(packageDefinition).rpc;
-      const serviceClient = (rpcProto as any).rpc?.Api;
+      const serviceClient = (rpcProto as any).Api;
 
       if (!serviceClient) {
         throw new Error("No se pudo encontrar el servicio Api en el proto");
