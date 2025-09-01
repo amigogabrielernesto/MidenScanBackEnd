@@ -6,6 +6,7 @@ use thiserror::Error;
 use miden_objects::block::BlockHeader;
 #[allow(unused_imports)]  
 use std::convert::TryFrom;
+use std::time::SystemTime;
 
 #[derive(Debug, Deserialize)]
 struct DecodeRequest {
@@ -30,6 +31,11 @@ struct DecodeResponse {
 impl warp::reject::Reject for ApiError {}
 
 async fn decode_handler(req: DecodeRequest) -> Result<DecodeResponse, ApiError> {
+      // Log de la llamada recibida
+    let start_time = SystemTime::now();
+    println!("📥 Received decode request at: {:?}", start_time);
+    //println!("📊 Request data length: {} characters", req.base64_data.len());
+    
     let b64 = req.data;
     let raw = BASE64_STANDARD.decode(&b64)
         .map_err(|e| ApiError::Decode(format!("Base64 decoding failed: {}", e)))?;

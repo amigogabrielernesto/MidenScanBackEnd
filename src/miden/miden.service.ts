@@ -1,3 +1,5 @@
+import * as protobuf from "google-protobuf";
+import { Empty } from "google-protobuf/google/protobuf/empty_pb";
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import * as grpc from "@grpc/grpc-js";
@@ -33,10 +35,7 @@ export class MidenService implements OnModuleInit {
         grpcOptions.loader
       );
 
-      console.log(
-        "Package structure:",
-        JSON.stringify(packageDefinition, null, 2)
-      );
+      //console.log("Package structure:", JSON.stringify(packageDefinition, null, 2)      );
       const rpcProto = grpc.loadPackageDefinition(packageDefinition).rpc;
       const serviceClient = (rpcProto as any).Api;
 
@@ -347,4 +346,113 @@ export class MidenService implements OnModuleInit {
 
     return resultados;
   }
+
+  async checkGrpcStatus(): Promise<any> {
+    try {
+      if (!this.grpcClient) {
+        throw new Error("gRPC client not initialized");
+      }
+
+      const empty = new Empty();
+      const status = await new Promise((resolve, reject) => {
+        this.grpcClient.status(empty, (error: any, response: any) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(response);
+          }
+        });
+      });
+
+      return {
+        success: true,
+        grpcStatus: status,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  // Método para verificar solo la conexión (sin llamar al server)
+  isGrpcClientReady(): boolean {
+    return !!this.grpcClient;
+  }
+
+  async checkGrpcHealth(): Promise<{
+    healthy: boolean;
+    response?: any;
+    error?: string;
+  }> {
+    try {
+      if (!this.grpcClient) {
+        return { healthy: false, error: "gRPC client not initialized" };
+      }
+
+      const healthResponse = await new Promise((resolve, reject) => {
+        this.grpcClient.status({}, (error: any, response: any) => {
+          if (error) reject(error);
+          else resolve(response);
+        });
+      });
+
+      return {
+        healthy: true,
+        response: healthResponse,
+      };
+    } catch (error) {
+      return {
+        healthy: false,
+        error: error.message,
+      };
+    }
+  }
+
+  async checkGrpcStatusWithMetrics() {
+    const startTime = Date.now();
+    this.grpcMetrics.totalCalls++;
+
+    try {
+      const response = await new Promise((resolve, reject) => {
+        this.grpcClient.status({}, (error: any, response: any) => {
+          if (error) reject(error);
+          else resolve(response);
+        });
+      });
+
+      const responseTime = Date.now() - startTime;
+      this.grpcMetrics.successfulCalls++;
+      this.grpcMetrics.lastCallTimestamp = new Date();
+      this.grpcMetrics.averageResponseTime =
+        (this.grpcMetrics.averageResponseTime *
+          (this.grpcMetrics.successfulCalls - 1) +
+          responseTime) /
+        this.grpcMetrics.successfulCalls;
+
+      return {
+        healthy: true,
+        responseTime,
+        response,
+      };
+    } catch (error) {
+      this.grpcMetrics.failedCalls++;
+      return {
+        healthy: false,
+        error: error.message,
+        responseTime: Date.now() - startTime,
+      };
+    }
+  }
+
+  private grpcMetrics = {
+    totalCalls: 0,
+    successfulCalls: 0,
+    failedCalls: 0,
+    lastCallTimestamp: null as Date | null,
+    averageResponseTime: 0,
+  };
 }

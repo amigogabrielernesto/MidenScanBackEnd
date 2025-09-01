@@ -80,20 +80,48 @@ export class MidenController {
   @Get("status")
   async getStatus() {
     try {
-      // Verificar si el cliente gRPC está inicializado
-      const grpcReady = !!this.midenTestService["grpcClient"]; // Acceder mediante notación de corchetes
+      // Verificar conexión gRPC y obtener status del servidor
+      const grpcStatus = await this.midenTestService.checkGrpcStatus();
 
       return {
         success: true,
-        grpcReady: grpcReady,
+        grpcReady: this.midenTestService.isGrpcClientReady(),
+        grpcServerStatus: grpcStatus.success ? "connected" : "disconnected",
         rustService: this.midenTestService.RUST_SERVICE_URL,
         timestamp: new Date().toISOString(),
+        details: grpcStatus, // Incluir detalles del status del servidor
       };
     } catch (error) {
       return {
         success: false,
         error: error.message,
+        timestamp: new Date().toISOString(),
       };
     }
   }
+
+  @Get("grpc-health")
+  async getGrpcHealth() {
+    const health = await this.midenTestService.checkGrpcHealth();
+    return {
+      timestamp: new Date().toISOString(),
+      ...health,
+    };
+  }
+
+  @Get("grpc-metrics")
+  async getGrpcMetrics() {
+    return {
+      timestamp: new Date().toISOString(),
+      metrics: this.grpcMetrics,
+    };
+  }
+
+  private grpcMetrics = {
+    totalCalls: 0,
+    successfulCalls: 0,
+    failedCalls: 0,
+    lastCallTimestamp: null as Date | null,
+    averageResponseTime: 0,
+  };
 }
