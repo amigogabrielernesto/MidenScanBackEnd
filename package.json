@@ -1,16 +1,19 @@
 {
   "name": "scanbe",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/src/main.js",
   "scripts": {
     "proto:gen": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./proto --ts_proto_opt=nestJs=true,outputServices=grpc-js,useOptionals=true --proto_path=./proto ./proto/**/*.proto",
-    "build": "nest build",
+    "build": "npm run prebuild && npx tsc -p tsconfig.build.json",
+    "prebuild": "rimraf dist",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
+    "start": "node dist/src/main",
+    "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "start:debug": "ts-node-dev --inspect --respawn --transpile-only src/main.ts",
+    "start:prod": "node dist/src/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "vercel-build": "npm run build",
+    "vercel-dev": "npm run start:dev"
   },
   "keywords": [],
   "author": "",
@@ -35,13 +38,27 @@
     "express": "^5.1.0",
     "google-protobuf": "^4.0.0",
     "ioredis": "^5.7.0",
+    "reflect-metadata": "^0.2.2",
+    "rimraf": "^6.0.1",
+    "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
-    "ts-node-dev": "^2.0.0",
-    "ts-proto": "^2.7.7",
-    "typescript": "^5.9.2"
+    "ts-proto": "^2.7.7"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@types/google-protobuf": "^3.15.12",
-    "grpc-tools": "^1.13.0"
+    "@types/node": "^22.10.2",
+    "@types/swagger-ui-express": "^4.1.6",
+    "eslint": "^9.16.0",
+    "grpc-tools": "^1.13.0",
+    "prettier": "^3.3.3",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
