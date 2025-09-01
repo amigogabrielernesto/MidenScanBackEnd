@@ -4,7 +4,7 @@ import axios from "axios";
 
 @Injectable()
 export class MidenRustService {
-  private readonly rustServiceUrl = "http://localhost:3030";
+  private readonly rustServiceUrl = "http://127.0.0.1:3030";
 
   async deserializeBlock(blockBytes: Uint8Array): Promise<any> {
     try {

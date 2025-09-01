@@ -14,10 +14,9 @@ export class MidenController {
   @Get("test-examples")
   async testExamples() {
     const testResults = await this.midenTestService.testExamples();
-
     return {
       timestamp: new Date().toISOString(),
-      rustService: "http://127.0.0.1:3030/decode",
+      rustService: this.midenTestService.RUST_SERVICE_URL,
       testResults: testResults,
     };
   }
@@ -25,5 +24,76 @@ export class MidenController {
   @Get("test-block/:number")
   async testBlock(@Param("number") blockNumber: number) {
     return this.midenTestService.testBlock(blockNumber);
+  }
+
+  // Nuevos endpoints para bloques reales
+  @Get("bloque-real/:numero")
+  async obtenerBloqueReal(@Param("numero") numeroBloque: number) {
+    return this.midenTestService.probarBloqueReal(numeroBloque);
+  }
+
+  @Get("bloque-header/:numero")
+  async obtenerHeaderBloque(@Param("numero") numeroBloque: number) {
+    return this.midenTestService.obtenerHeaderBloque(numeroBloque);
+  }
+
+  @Get("bloques-reales/:numeros")
+  async obtenerBloquesReales(@Param("numeros") numerosBloques: string) {
+    const numeros = numerosBloques.split(",").map((n) => parseInt(n.trim()));
+    return this.midenTestService.probarMultiplesBloques(numeros);
+  }
+
+  // ==================== ENDPOINT DEBUG gRPC ====================
+  @Get("debug-grpc/:numero")
+  async debugGrpc(@Param("numero") blockNumber: number) {
+    try {
+      // Agregar el método tryDifferentGrpcMethods al servicio si no existe
+      const result = await this.midenTestService.tryDifferentGrpcMethods(
+        blockNumber
+      );
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ==================== ENDPOINT INFO gRPC ====================
+  @Get("grpc-info")
+  async getGrpcInfo() {
+    return {
+      grpcServer: "rpc.testnet.miden.io:443",
+      availableMethods: [
+        "GetBlockByNumber",
+        "GetBlockHeaderByNumber",
+        "GetAccountDetails",
+        "CheckNullifiers",
+        "SubmitProvenTransaction",
+        "SyncNotes",
+        "SyncState",
+        "Status",
+      ],
+      rustService: this.midenTestService.RUST_SERVICE_URL,
+    };
+  }
+
+  // ==================== ENDPOINT STATUS ====================
+  @Get("status")
+  async getStatus() {
+    try {
+      // Verificar si el cliente gRPC está inicializado
+      const grpcReady = !!this.midenTestService["grpcClient"]; // Acceder mediante notación de corchetes
+
+      return {
+        success: true,
+        grpcReady: grpcReady,
+        rustService: this.midenTestService.RUST_SERVICE_URL,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   }
 }

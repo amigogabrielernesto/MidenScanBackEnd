@@ -35,9 +35,12 @@ async fn decode_handler(req: DecodeRequest) -> Result<DecodeResponse, ApiError> 
         .map_err(|e| ApiError::Decode(format!("Base64 decoding failed: {}", e)))?;
     
     // DEBUG: Ver qué datos recibimos
+    println!("=== BLOCK DATA ANALYSIS ===");
+    println!("Base64 length: {} chars", b64.len());
     println!("Received base64: {}", b64);
-    println!("Decoded bytes length: {} bytes", raw.len());
-    println!("First 10 bytes: {:?}", &raw[..std::cmp::min(10, raw.len())]);
+    println!("Raw bytes length: {} bytes", raw.len());
+    println!("Hex: {}", hex::encode(&raw));
+    println!("First 20 bytes: {:?}", &raw[..std::cmp::min(20, raw.len())]);
     
     // TODO: Aquí necesitamos descubrir el formato correcto
     // Mientras tanto, retornamos info de debug
